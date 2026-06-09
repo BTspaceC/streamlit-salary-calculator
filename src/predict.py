@@ -184,22 +184,72 @@ def make_prediction_input(
     is_damaged: bool,
     category_override: str | None = None,
 ) -> PredictionInput:
-    if has_shelf_life and expiry_date is not None:
+    safe_item_name = "" if (item_name is None or pd.isna(item_name)) else str(item_name).strip()
+    safe_description = "" if (description is None or pd.isna(description)) else str(description).strip()
+    
+    def _to_int(val, default=0) -> int:
+        if val is None or pd.isna(val):
+            return default
+        try:
+            return int(float(val))
+        except (ValueError, TypeError):
+            return default
+
+    def _to_float(val, default=0.0) -> float:
+        if val is None or pd.isna(val):
+            return default
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return default
+
+    def _to_bool(val, default=False) -> bool:
+        if val is None or pd.isna(val):
+            return default
+        if isinstance(val, bool):
+            return val
+        s = str(val).strip().lower()
+        if s in ("true", "1", "yes", "y", "t", "checked", "是"):
+            return True
+        if s in ("false", "0", "no", "n", "f", "unchecked", "否"):
+            return False
+        try:
+            return bool(float(val))
+        except (ValueError, TypeError):
+            return default
+
+    has_shelf_life_bool = _to_bool(has_shelf_life, False)
+    is_damaged_bool = _to_bool(is_damaged, False)
+    is_shared_bool = _to_bool(is_shared, False)
+
+    is_expiry_date_valid = False
+    if expiry_date is not None and not pd.isna(expiry_date):
+        if isinstance(expiry_date, date):
+            is_expiry_date_valid = True
+        else:
+            try:
+                expiry_date = pd.to_datetime(expiry_date).date()
+                is_expiry_date_valid = True
+            except Exception:
+                pass
+
+    if has_shelf_life_bool and is_expiry_date_valid:
         days_to_expire = (expiry_date - date.today()).days
-    elif has_shelf_life:
+    elif has_shelf_life_bool:
         _, days_to_expire = parse_shelf_life("需核对包装有效期")
     else:
         days_to_expire = 999
+
     return PredictionInput(
-        item_name=item_name,
-        description=description,
-        used_days=int(used_days),
-        remaining_pct=float(remaining_pct),
-        weekly_use_count=float(weekly_use_count),
-        user_count=int(user_count),
-        is_shared=1 if is_shared else 0,
-        has_shelf_life=1 if has_shelf_life else 0,
-        days_to_expire=int(days_to_expire),
-        is_damaged=1 if is_damaged else 0,
+        item_name=safe_item_name,
+        description=safe_description,
+        used_days=_to_int(used_days, 30),
+        remaining_pct=_to_float(remaining_pct, 50.0),
+        weekly_use_count=_to_float(weekly_use_count, 1.0),
+        user_count=_to_int(user_count, 1),
+        is_shared=1 if is_shared_bool else 0,
+        has_shelf_life=1 if has_shelf_life_bool else 0,
+        days_to_expire=_to_int(days_to_expire, 999),
+        is_damaged=1 if is_damaged_bool else 0,
         category_override=category_override if category_override in CATEGORIES else None,
     )

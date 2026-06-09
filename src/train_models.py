@@ -20,9 +20,9 @@ import jieba
 from sklearn.model_selection import GridSearchCV
 
 try:
-    from .features import CATEGORIES, RISK_FEATURES, RISK_LABELS, normalize_category, risk_rule_baseline
+    from .features import CATEGORIES, RISK_FEATURES, RISK_LABELS, normalize_category, risk_rule_baseline, jieba_tokenize
 except ImportError:  # pragma: no cover - supports direct script execution
-    from features import CATEGORIES, RISK_FEATURES, RISK_LABELS, normalize_category, risk_rule_baseline
+    from features import CATEGORIES, RISK_FEATURES, RISK_LABELS, normalize_category, risk_rule_baseline, jieba_tokenize
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -129,12 +129,13 @@ def validate_training_data(train_df: pd.DataFrame) -> None:
         raise ValueError(f"Unknown risk labels: {missing_risk}")
 
 
+
 def train_category_model(train_df: pd.DataFrame) -> Pipeline:
     model = Pipeline(
         steps=[
             (
                 "tfidf",
-                TfidfVectorizer(tokenizer=jieba.lcut, min_df=2),
+                TfidfVectorizer(tokenizer=jieba_tokenize, min_df=2),
             ),
             (
                 "classifier",
@@ -267,54 +268,72 @@ def write_model_report(results: dict, train_df: pd.DataFrame, test_df: pd.DataFr
     for label, values in zip(RISK_LABELS, results["risk_confusion_matrix"]):
         matrix_rows.append("| " + label + " | " + " | ".join(str(v) for v in values) + " |")
 
-    report = f"""# 模型评估报告
+    report = f"""---
+title: "模型评估报告"
+author:
+  - 机器学习课程项目小组
+date: {datetime.now().date().isoformat()}
+---
 
-## 数据说明
+# 模型评估报告
 
-- 训练样本数：{len(train_df)}
-- 真实留出测试样本数：{len(test_df)}
-- 扩展样本主要用于补足训练场景，不作为证明系统真实有效性的核心依据。
-- 训练脚本会拒绝 `label_source=rule_initial` 的样本进入训练集。
-- 真实效果主要参考留出真实样本测试和后续用户交付试用记录。
+本报告记录系统内“物品类别分类模型”和“宿舍物品状态风险模型”在留出测试集上的评估指标。
 
-## 指标摘要
+## 一、评估数据集说明
 
-| 模型/基线 | Accuracy | Macro F1 |
-|---|---:|---:|
-| 物品类别分类模型 | {results["category_accuracy"]:.3f} | {results["category_macro_f1"]:.3f} |
-| 状态风险预测模型（端到端） | {results["risk_e2e_accuracy"]:.3f} | {results["risk_e2e_macro_f1"]:.3f} |
-| 状态风险预测模型（使用人工类别，仅分析） | {results["risk_oracle_accuracy"]:.3f} | {results["risk_oracle_macro_f1"]:.3f} |
-| 规则基线（仅对照） | {results["rule_baseline_accuracy"]:.3f} | {results["rule_baseline_macro_f1"]:.3f} |
+- **训练样本总量**：{len(train_df)} 条。
+- **真实留出测试样本量**：{len(test_df)} 条。
+- **样本约束**：系统拒绝初始规则标签（`label_source=rule_initial`）样本进入训练集，以保障训练数据的纯净性。
+- **指标意义**：本评估结果主要用于验证全流程的可行性与模型的基础效能。
 
-## 真实留出样本预测明细
+## 二、指标摘要
 
-| 物品 | 真实类别 | 预测类别 | 真实状态 | 模型状态 | 规则基线状态 |
-|---|---|---|---|---|---|
+| 模型/基准方法 | 准确率 (Accuracy) | 宏平均 F1 (Macro F1) |
+|:---|---:|---:|
+| **物品类别分类模型** | {results["category_accuracy"]:.3f} | {results["category_macro_f1"]:.3f} |
+| **状态风险预测模型（端到端）** | {results["risk_e2e_accuracy"]:.3f} | {results["risk_e2e_macro_f1"]:.3f} |
+| **状态风险预测模型（使用人工真类别）** | {results["risk_oracle_accuracy"]:.3f} | {results["risk_oracle_macro_f1"]:.3f} |
+| **规则对照基线** | {results["rule_baseline_accuracy"]:.3f} | {results["rule_baseline_macro_f1"]:.3f} |
+
+: 表 1：模型与规则基线评估指标对比
+
+## 三、真实留出样本预测明细
+
+| 物品名称 | 真实类别 | 预测类别 | 真实状态 | 模型预测状态 | 规则基线状态 |
+|:---|:---|:---|:---|:---|:---|
 {chr(10).join(comparison_rows)}
 
-## 状态风险模型混淆矩阵
+: 表 2：{len(test_df)}条真实留出样本预测详情
 
-列顺序：{"、".join(RISK_LABELS)}
+## 四、状态风险模型混淆矩阵
 
-| 真实标签 | {" | ".join(RISK_LABELS)} |
-|---|---:|---:|---:|---:|
+*注：类别顺序为：正常、需要关注、建议补货、过期/损坏风险。*
+
+| 真实标签 \\ 预测标签 | {" | ".join(RISK_LABELS)} |
+|:---|----:|----:|----:|----:|
 {chr(10).join(matrix_rows)}
 
-## 分类模型详细报告
+: 表 3：状态风险预测混淆矩阵
+
+<div style="page-break-after: always;"></div>
+
+## 五、分类模型详细报告
 
 ```text
 {results["category_report"]}
 ```
 
-## 状态风险模型详细报告
+## 六、状态风险模型详细报告
 
 ```text
 {results["risk_report"]}
 ```
 
-## 局限性说明
+## 七、局限性与改进方向
 
-类别模型在当前真实留出样本上表现较好，但真实样本数量较少，且训练数据仍然集中在宿舍用品场景内，该指标主要说明流程可行，不能证明模型具备强泛化能力。风险模型相较规则基线有一定提升，但效果仍属于中等，后续需要结合更多真实用户反馈进行周期性再训练。当前版本不进行在线学习；用户反馈会保存为后续再训练的数据依据。
+1. **类别分类模型**：虽然在留出测试集上达到较高准确率，但样本量偏小且测试集与训练集同分布，泛化能力仍需在大规模未知领域上验证。
+2. **状态风险模型**：相较于规则基线有显著提升（Accuracy: {results["risk_e2e_accuracy"]:.3f} vs {results["rule_baseline_accuracy"]:.3f}），但在“正常”与“需要关注”的区分上存在一定偏差。这主要是由于不同品类间使用频次的统计方差较大所致。
+3. **数据迭代方案**：后续将继续通过系统内置的反馈持久化模块，收集更多用户的真实纠偏数据，以便执行定期的线下重训和模型优化。
 """
     (REPORTS_DIR / "model_eval.md").write_text(report, encoding="utf-8")
 

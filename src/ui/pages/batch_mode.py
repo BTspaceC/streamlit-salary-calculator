@@ -54,27 +54,66 @@ def normalize_batch_columns(df: pd.DataFrame) -> pd.DataFrame:
         normalized = normalized.rename(columns=rename_map)
     return normalized
 
+def safe_str(val, default="") -> str:
+    if pd.isna(val) or val is None:
+        return default
+    s = str(val).strip()
+    if s.lower() in ("nan", "none", "null", ""):
+        return default
+    return s
+
+def safe_int(val, default=0) -> int:
+    if pd.isna(val) or val is None:
+        return default
+    try:
+        return int(float(val))
+    except (ValueError, TypeError):
+        return default
+
+def safe_float(val, default=0.0) -> float:
+    if pd.isna(val) or val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+def safe_bool(val, default=False) -> bool:
+    if pd.isna(val) or val is None:
+        return default
+    if isinstance(val, bool):
+        return val
+    s = str(val).strip().lower()
+    if s in ("true", "1", "yes", "y", "t", "checked", "是"):
+        return True
+    if s in ("false", "0", "no", "n", "f", "unchecked", "否"):
+        return False
+    try:
+        return bool(float(val))
+    except (ValueError, TypeError):
+        return default
+
 def predict_batch(df: pd.DataFrame, bundles=None) -> list[dict]:
     results = []
     for idx, row in df.iterrows():
-        name = str(row.get('物品名称', ''))
-        if not name.strip():
+        name = safe_str(row.get('物品名称'))
+        if not name:
             continue
         
         input_data = make_prediction_input(
             item_name=name,
-            description=str(row.get('用户描述', '')),
-            used_days=int(row.get('使用天数', 30)),
-            remaining_pct=float(row.get('剩余量(%)', 50.0)),
-            weekly_use_count=float(row.get('周频次', 1.0)),
-            user_count=int(row.get('使用人数', 1)),
-            is_shared=bool(row.get('是否共用', False)),
-            has_shelf_life=bool(row.get(BATCH_HAS_SHELF_LIFE_COLUMN, False)),
+            description=safe_str(row.get('用户描述', '')),
+            used_days=safe_int(row.get('使用天数'), 30),
+            remaining_pct=safe_float(row.get('剩余量(%)'), 50.0),
+            weekly_use_count=safe_float(row.get('周频次'), 1.0),
+            user_count=safe_int(row.get('使用人数'), 1),
+            is_shared=safe_bool(row.get('是否共用'), False),
+            has_shelf_life=safe_bool(row.get(BATCH_HAS_SHELF_LIFE_COLUMN), False),
             expiry_date=None,
-            is_damaged=bool(row.get('是否破损', False))
+            is_damaged=safe_bool(row.get('是否破损'), False)
         )
         if input_data.has_shelf_life:
-            input_data.days_to_expire = int(row.get(BATCH_EXPIRE_DAYS_COLUMN, 999))
+            input_data.days_to_expire = safe_int(row.get(BATCH_EXPIRE_DAYS_COLUMN), 999)
         
         res = predict(input_data, model_bundles=bundles)
         

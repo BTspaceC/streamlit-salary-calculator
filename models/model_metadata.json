@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-06-06T15:33:15",
+  "trained_at": "2026-06-09T22:40:50",
   "train_rows": 100,
   "real_holdout_rows": 9,
   "category_labels": [
@@ -30,15 +30,15 @@
   "metrics": {
     "category_accuracy": 1.0,
     "category_macro_f1": 0.8333333333333334,
-    "risk_oracle_accuracy": 0.7777777777777778,
-    "risk_oracle_macro_f1": 0.8041666666666667,
-    "risk_e2e_accuracy": 0.7777777777777778,
-    "risk_e2e_macro_f1": 0.8041666666666667,
+    "risk_oracle_accuracy": 0.6666666666666666,
+    "risk_oracle_macro_f1": 0.6761904761904762,
+    "risk_e2e_accuracy": 0.6666666666666666,
+    "risk_e2e_macro_f1": 0.6761904761904762,
     "rule_baseline_accuracy": 0.5555555555555556,
     "rule_baseline_macro_f1": 0.5666666666666667
   },
   "environment": {
-    "python": "3.12.13",
+    "python": "3.13.0",
     "pandas": "3.0.1",
     "scikit_learn": "1.9.0",
     "joblib": "1.5.3"

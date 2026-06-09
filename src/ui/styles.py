@@ -528,8 +528,8 @@ def render_theme_bridge() -> None:
     Falls back to localStorage key containing ``stActiveTheme-`` and finally
     to the system ``prefers-color-scheme`` media query.
     """
-    from streamlit.components.v1 import html as _components_html
-    _components_html(
+    import streamlit as st
+    st.iframe(
         '''
         <script>
         (function () {
@@ -682,6 +682,6 @@ def render_theme_bridge() -> None:
         })();
         </script>
         ''',
-        height=0,
-        width=0,
+        height=1,
+        width=1,
     )

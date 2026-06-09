@@ -6,6 +6,11 @@ from datetime import date
 from typing import Any
 
 
+def jieba_tokenize(text: str) -> list[str]:
+    import jieba
+    return jieba.lcut(text)
+
+
 CATEGORIES = [
     "清洁日用",
     "洗漱用品",
@@ -83,7 +88,21 @@ NEGATIVE_DAMAGE_PATTERNS = [
 def text_or_empty(value: Any) -> str:
     if value is None:
         return ""
-    return str(value).strip()
+    try:
+        import pandas as pd
+        if pd.isna(value):
+            return ""
+    except ImportError:
+        try:
+            import math
+            if isinstance(value, float) and math.isnan(value):
+                return ""
+        except Exception:
+            pass
+    s = str(value).strip()
+    if s.lower() in ("nan", "none", "<na>"):
+        return ""
+    return s
 
 
 def normalize_category(raw_category: str, item_name: str = "", description: str = "") -> str:
