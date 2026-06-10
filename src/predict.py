@@ -156,7 +156,7 @@ def predict_category(
         predicted_category = ""
 
     fallback_category = normalize_category("", item_name, description)
-    if confidence < 0.40 and fallback_category != "其他用品":
+    if (confidence < 0.40 and fallback_category != "其他用品") or (confidence < 0.30):
         predicted_category = fallback_category
         # Redistribute probability: assign fallback category the max confidence,
         # and scale down other categories proportionally.

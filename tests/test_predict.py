@@ -89,3 +89,19 @@ def test_predict_batch_standard_and_none_values() -> None:
     assert results[0]["处理状态"] == "已预测"
     assert "预测类别" in results[0]
     assert "状态风险" in results[0]
+
+def test_predict_extremely_low_confidence_fallback() -> None:
+    inp = make_prediction_input(
+        item_name="完全陌生的神秘东西",
+        description="不匹配任何已知物理世界常见事物的罕见说明",
+        used_days=10,
+        remaining_pct=90,
+        weekly_use_count=1,
+        user_count=1,
+        is_shared=False,
+        has_shelf_life=False,
+        expiry_date=None,
+        is_damaged=False
+    )
+    res = predict(inp)
+    assert res["predicted_category"] == "其他用品"

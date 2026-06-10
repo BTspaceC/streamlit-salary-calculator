@@ -17,6 +17,7 @@ CATEGORIES = [
     "健康与补剂用品",
     "学习用品",
     "电子配件",
+    "文体娱乐",
     "其他用品",
 ]
 
@@ -111,15 +112,19 @@ def normalize_category(raw_category: str, item_name: str = "", description: str 
 
     if raw in {"药品健康", "健身补剂", "健康与补剂用品"}:
         return "健康与补剂用品"
-    if raw in {"清洁日用", "洗漱用品", "学习用品", "电子配件", "其他用品"}:
+    if raw in {"体育用品", "健身器材", "文体娱乐"}:
+        return "文体娱乐"
+    if raw in {"清洁日用", "洗漱用品", "学习用品", "电子配件", "文体娱乐", "其他用品"}:
         if raw == "其他用品":
-            # 优先处理带有强清洁日用属性的纸制品（抽纸、卷纸等）及清洁物品，防止误判为学习用品
+            # 优先处理带有强清洁日用属性 of paper products (tissues, rolls, etc.) and cleaning items to prevent misclassification
             if any(k in text for k in ["纸巾", "抽纸", "卷纸", "卫生纸", "湿巾", "湿纸巾", "面巾", "餐巾", "手纸", "卷筒纸", "垃圾袋", "洗衣", "洗涤"]):
                 return "清洁日用"
             if any(k in text for k in ["笔", "纸", "文件", "便利贴", "草稿", "打印"]):
                 return "学习用品"
             if any(k in text for k in ["充电", "数据线", "电池", "耳机", "插排", "转换头"]):
                 return "电子配件"
+            if any(k in text for k in ["球", "运动", "健身", "锻炼", "拍", "哑铃", "拉力器", "跳绳", "瑜伽", "棋", "牌", "书", "小说", "杂志"]):
+                return "文体娱乐"
         return raw
 
     if any(k in text for k in ["纸巾", "抽纸", "卷纸", "卫生纸", "湿巾", "湿纸巾", "面巾", "餐巾", "手纸", "卷筒纸", "垃圾袋", "洗衣", "洗手液", "消毒", "洗洁精", "清洁"]):
@@ -132,6 +137,8 @@ def normalize_category(raw_category: str, item_name: str = "", description: str 
         return "学习用品"
     if any(k in text for k in ["充电", "数据线", "电池", "插排", "耳机", "转换头"]):
         return "电子配件"
+    if any(k in text for k in ["球", "运动", "健身", "锻炼", "拍", "哑铃", "拉力器", "跳绳", "瑜伽", "棋", "牌", "书", "小说", "杂志"]):
+        return "文体娱乐"
     return "其他用品"
 
 

@@ -29,6 +29,8 @@ def test_normalize_category_falls_back_from_text() -> None:
     assert normalize_category("其他用品", "湿纸巾", "") == "清洁日用"
     assert normalize_category("其他用品", "卷筒纸", "") == "清洁日用"
     assert normalize_category("其他用品", "草稿纸", "") == "学习用品"
+    assert normalize_category("其他用品", "篮球", "平时拿来体育运动") == "文体娱乐"
+    assert normalize_category("", "哑铃", "健身器材") == "文体娱乐"
 
 
 def test_estimate_remaining_days_handles_boundaries() -> None:
