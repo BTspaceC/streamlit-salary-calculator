@@ -233,11 +233,46 @@ def render_result_and_feedback(signature: tuple[int, int, int, str]) -> None:
 
     st.divider()
     st.subheader("试用数据导出")
-    if st.button("导出试用记录", width='stretch'):
+    
+    if "trial_exported" not in st.session_state:
+        st.session_state["trial_exported"] = False
+
+    if st.button("导出并生成下载文件", width='stretch'):
         csv_path, md_path, row_count = export_trial_records()
-        st.success(f"已导出 {row_count} 条记录。")
-        st.caption(f"CSV：{csv_path}")
-        st.caption(f"Markdown：{md_path}")
+        st.session_state["trial_exported"] = True
+        st.session_state["trial_row_count"] = row_count
+        st.session_state["trial_csv_path"] = csv_path
+        st.session_state["trial_md_path"] = md_path
+        st.success(f"已成功在服务器导出 {row_count} 条记录。请在下方点击下载！")
+
+    if st.session_state["trial_exported"]:
+        try:
+            with open(st.session_state["trial_csv_path"], "r", encoding="utf-8-sig") as f:
+                csv_data = f.read()
+            with open(st.session_state["trial_md_path"], "r", encoding="utf-8") as f:
+                md_data = f.read()
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                st.download_button(
+                    label="📥 下载 CSV 报表",
+                    data=csv_data.encode("utf-8-sig"),
+                    file_name="user_trial_export.csv",
+                    mime="text/csv",
+                    key="download_csv_btn",
+                    width='stretch'
+                )
+            with c2:
+                st.download_button(
+                    label="📥 下载 Markdown 报告",
+                    data=md_data.encode("utf-8"),
+                    file_name="user_trial_export.md",
+                    mime="text/markdown",
+                    key="download_md_btn",
+                    width='stretch'
+                )
+        except Exception as e:
+            st.error(f"读取导出文件失败: {e}")
 
 def render_empty_result_panel() -> None:
     with st.container(border=True):
